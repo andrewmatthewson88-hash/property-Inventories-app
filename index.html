@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en-GB"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Inventory Pro</title>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--tx:#1b1f24;--mu:#6a7380;--ac:#1f6feb;--bd:#dde1e7;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171b;--card:#1e2329;--tx:#e8ebef;--mu:#98a2b0;--ac:#5b9dff;--bd:#323943}}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+#app{max-width:760px;margin:0 auto;padding:14px}
+h1{font-size:22px;margin:4px 0 12px}h2{font-size:17px;margin:0 0 8px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:12px}
+button{font:inherit;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:8px;padding:8px 12px;cursor:pointer}
+button.p{background:var(--ac);color:#fff;border-color:var(--ac)}button.d{color:#d33}
+input,select,textarea{font:inherit;width:100%;padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx)}
+textarea{min-height:52px}label{font-size:13px;color:var(--mu);display:block;margin:6px 0 2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>*{flex:1 1 140px}.row>button{flex:0 0 auto}
+.item{border-top:1px solid var(--bd);padding-top:8px;margin-top:8px}
+.th{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.th div{position:relative}
+.th img{width:72px;height:72px;object-fit:cover;border-radius:6px}
+.th b{position:absolute;top:-4px;right:-4px;background:#d33;color:#fff;border-radius:50%;width:20px;height:20px;text-align:center;font-size:13px;line-height:20px;cursor:pointer}
+.mu{color:var(--mu);font-size:14px}
+.paper{background:#fff;color:#111;padding:22px;border-radius:6px;border:1px solid #ccc}
+.paper h1{font-size:24px;margin:0}.paper h2{background:#eef1f5;padding:6px 8px;margin:18px 0 6px;font-size:16px}
+.paper table{width:100%;border-collapse:collapse;font-size:14px}.paper td,.paper th{border:1px solid #ccc;padding:5px 7px;text-align:left;vertical-align:top}
+.paper .ph img{width:110px;height:110px;object-fit:cover;margin:3px 3px 0 0}
+.paper .sig{display:flex;gap:30px;margin-top:40px}.paper .sig div{flex:1;border-top:1px solid #111;padding-top:4px;font-size:13px}
+@media print{body{background:#fff}#app{padding:0;max-width:none}.noprint{display:none!important}.paper{border:0;padding:0}.paper h2{break-after:avoid}.paper tr{break-inside:avoid}}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:8px}.dh{font-size:11px;color:var(--mu);text-align:center}.dc{min-height:64px;border:1px solid var(--bd);border-radius:6px;padding:2px;overflow:hidden;cursor:pointer;font-size:10px;line-height:1.25;min-width:0}.dc.sel{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac)}.dc span{font-weight:600;font-size:12px;display:block;width:fit-content}.dc.td span{background:var(--ac);color:#fff;border-radius:10px;padding:0 5px}.dc i{display:block;font-style:normal;background:var(--ac);color:#fff;border-radius:3px;padding:0 3px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dc i.iv{background:var(--mu)}.dc em{color:var(--mu);font-style:normal}
+.pf{display:none}.paper figure{display:inline-block;margin:4px;font-size:10px;text-align:center}.paper .pb,.paper .cover{margin-bottom:20px}.sigb{border:1px solid #999;padding:4px 8px;margin:10px 0;break-inside:avoid}.sigb div{border-bottom:1px dotted #999;padding:6px 0}
+@media print{.pf{display:flex;justify-content:space-between;position:fixed;bottom:0;left:0;right:0;font-size:11px;color:#555}.paper{padding-bottom:28px}.cover,.pb{break-after:page}}
+</style></head><body><div id="app"></div>
+<input type="file" id="pf" accept="image/*" hidden>
+<script>
+var S={view:'list',cur:null,biz:{name:'',contact:'',pay:'',vat:0},reports:[],rates:[],jobs:[],invs:[],sel:{},ci:null,mo:'',day:'',nj:{date:new Date().toISOString().slice(0,10),client:'',desc:'',rate:'',qty:1,price:0}},T=null;
+try{var d=JSON.parse(localStorage.getItem('invpro'));if(d){S.biz=d.biz||S.biz;S.reports=d.reports||[];S.rates=d.rates||[];S.jobs=d.jobs||[];S.invs=d.invs||[]}}catch(e){}
+if(!S.rates.length)S.rates=['Inventory','Check-in','Check-out','Mid-term inspection','Smoke alarm test','General admin'].map(function(n,i){return{id:'t'+i,name:n,price:0}});
+function dump(){return{biz:S.biz,reports:S.reports,rates:S.rates,jobs:S.jobs,invs:S.invs}}
+function N(x){return parseFloat(x)||0}
+function m(x){return'£'+x.toFixed(2)}
+function tot(i){var s=0;i.lines.forEach(function(l){s+=N(l.qty)*N(l.price)});var v=s*N(i.vat)/100;return{s:s,v:v,t:s+v}}
+function invNo(id){var i=S.invs.filter(function(x){return x.id===id})[0];return i?i.no:''}
+function save(){try{localStorage.setItem('invpro',JSON.stringify(dump()))}catch(e){alert('Storage full. Back up your data and remove some photos.')}}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+var COND=['Excellent','Good','Fair','Worn','Poor','Missing','N/A'];
+var BASE=['Walls','Ceiling','Flooring','Windows','Door','Lighting/Sockets'];
+var ROOMS={'Entrance Hall':[],'Living Room':['Curtains/Blinds','Furniture'],'Kitchen':['Oven','Hob','Fridge/Freezer','Sink/Taps','Worktops'],'Bedroom 1':['Bed/Mattress','Wardrobe'],'Bathroom':['Bath/Shower','WC','Basin','Extractor'],'Garden':[]};
+var STD={f:['name','desc','notes'],h:['Name','Description','Condition']};
+var SECT={soc:{n:'Schedule of Condition',f:['name','notes'],h:['Name','Condition'],i:['General Cleanliness','Bathroom / En Suite(s)','Carpets','Ceiling(s)','Curtains / Blinds','Hard Flooring','Kitchen Area','Kitchen - White Goods','Oven / Hob / Extractor Hood / Cooker','Mattress(s)','Upholstery','Wall(s)','Window(s)','Woodwork']},meter:{n:'Meter Readings',f:['name','desc','x','notes'],h:['Type','Location','Serial No.','Reading'],i:['Gas Meter','Electric Meter','Water Meter']},keys:{n:'Keys',f:['name','desc'],h:['Name','Description'],i:['Yale Key','Window Lock']},alarm:{n:'Health & Safety | Smoke & Carbon Monoxide Alarms',f:['name','desc','notes'],h:['Name','Location Room & Floor','Test Result'],i:['Smoke Alarm(s)','Carbon Monoxide Alarm(s)']}};
+var DN='This inventory must be checked, signed, amended and returned within seven days of receipt. Failure will result in the Landlord’s agent being entitled to sign on the tenant’s behalf such that it is correct in all respects per contracts.\n\nAll items stated in inventory are assumed as working, unmarked and undamaged unless otherwise stated and any additional defaults should be pointed out in the space provided. Failure to do so will be considered your liability on inspection of the inventory.';
+var DD='I/We the undersigned, affirm that if I/we do not comment on the Inventory in writing within seven days of receipt of this Inventory then I/we accept the Inventory as being an accurate record of the contents and condition of the property.';
+function yn(n,i){SECT[n]={n:i[0],f:['name','notes','desc'],h:['Name','Condition','Comments'],i:i.slice(1)}}
+SECT.pi={n:'Property Information',f:['name','desc'],h:['Name','Description'],i:['Access to Property']};
+SECT.mt={n:'Maintenance Issues Report by Tenant',f:['name','desc'],h:['Name','Description'],i:['Information To Note']};
+yn('hs',['Health & Safety','Are all required alarms present and fitted in the correct areas?']);
+SECT.al={n:'Health & Safety | Smoke & Carbon Monoxide Alarms',f:['name','desc','notes'],h:['Name','Location Floor & Room','Test Result'],i:['Smoke Alarm(s)','Carbon Monoxide Alarm(s)','Heat Alarm']};
+yn('wp',['Interior of Property | Water Points','Are there any obvious water leaks in the Bathroom(s)?','Are there any obvious water leaks in any other rooms?']);
+yn('dm',['Decoration | Maintenance Issues','Are there any signs of damage or mould?','Would the flooring benefit from being cleaned and or replaced?','Is the standard of house-keeping acceptable?']);
+yn('uo',['Unauthorised Occupancy','Are there any signs of unauthorised occupancy within the property?']);
+yn('pt',['Pets','Are there any signs of pets at the property?']);
+yn('sm',['Smoking','Are there any signs of smoking within the property?']);
+SECT.soc2={n:'Schedule of Condition',f:['name','notes'],h:['Name','Condition'],i:['Entrance Hallway / Stairs / Landing','Kitchen','Lounge','Cloakroom','Bedroom 1','Bedroom 2','Bedroom 3','Bathroom']};
+function it0(n){return{name:n,desc:'',x:'',notes:'',photos:[]}}
+function mk(name){return{name:name,f:STD.f,h:STD.h,items:BASE.concat(ROOMS[name]||[]).map(it0)}}
+function mkS(k){var s=SECT[k];return{name:s.n,f:s.f,h:s.h,items:s.i.map(it0)}}
+function stamp(){var d=new Date();return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}
+function fl(rm,ri,ii,it){var f=rm.f||STD.f,h=rm.h||STD.h,i=f.indexOf('notes'),s=fl0(rm,ri,ii,it);if(cur().co&&i>=0)s+='<div class="row"><div><label>'+esc(h[i])+' at Check Out</label><textarea data-r="'+ri+'" data-i="'+ii+'" data-k="co">'+esc(it.co)+'</textarea></div><button data-a="same" data-r="'+ri+'" data-i="'+ii+'">As inventory</button></div>';return s}
+function fl0(rm,ri,ii,it){var f=rm.f||STD.f,h=rm.h||STD.h;return'<div class="row">'+f.map(function(k,x){return'<div><label>'+esc(h[x])+'</label>'+(k==='name'?'<input':'<textarea')+' data-r="'+ri+'" data-i="'+ii+'" data-k="'+k+'"'+(k==='name'?' value="'+esc(it[k])+'">':'>'+esc(it[k])+'</textarea>')+'</div>'}).join('')+'</div>'}
+function cur(){return S.reports.filter(function(r){return r.id===S.cur})[0]}
+function fmt(d){if(!d)return'';var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0]}
+function render(){var h='';
+if(S.view==='list'){
+h='<h1>Inventory Pro</h1>'+nav()+'<div class="row noprint"><button class="p" data-a="new">+ New inventory</button><button class="p" data-a="newI">+ New inspection</button></div><p class="mu">'+(S.reports.length?'':'No reports yet. Tap “New report” to start.')+'</p>';
+S.reports.slice().reverse().forEach(function(r){h+='<div class="card"><h2>'+esc(r.address||'Untitled property')+'</h2><div class="mu">'+esc(r.type)+' · '+fmt(r.date)+' · '+r.rooms.length+' rooms</div><div class="row" style="margin-top:8px"><button data-a="open" data-id="'+r.id+'">Edit</button><button data-a="preview" data-id="'+r.id+'">Report</button><button data-a="dup" data-id="'+r.id+'">Copy</button>'+(r.co||r.ins?'':'<button data-a="mkCO" data-id="'+r.id+'">Make check-out</button>')+'<button class="d" data-a="del" data-id="'+r.id+'">Delete</button></div></div>'})}
+else if(S.view==='settings'){
+h='<h1>Settings</h1>'+nav()+'<div class="card"><h2>Your business</h2><label>Business name</label><input data-b="name" value="'+esc(S.biz.name)+'"><label>Contact details (shown on report)</label><textarea data-b="contact">'+esc(S.biz.contact)+'</textarea><label>VAT % (leave 0 if not VAT registered)</label><input type="number" data-b="vat" value="'+esc(S.biz.vat)+'"><label>Payment details (shown on invoices)</label><textarea data-b="pay">'+esc(S.biz.pay)+'</textarea></div><div class="card"><h2>Report wording</h2><label>Logo (shown on report cover)</label>'+(S.biz.logo?'<img src="'+S.biz.logo+'" style="max-width:160px;display:block;margin-bottom:6px" alt="">':'')+'<input type="file" accept="image/*" data-up="logo"><label>Notes page text</label><textarea data-b="notes" style="min-height:90px">'+esc(S.biz.notes||DN)+'</textarea><label>Disclaimers (paste your own)</label><textarea data-b="disc" style="min-height:90px">'+esc(S.biz.disc)+'</textarea><label>Declaration text</label><textarea data-b="decl">'+esc(S.biz.decl||DD)+'</textarea></div><div class="card"><h2>Job rates</h2><p class="mu">Prices used in the diary and invoices. Set these to your own rates.</p>'+S.rates.map(function(r,i){return'<div class="row" style="flex-wrap:nowrap;margin-bottom:6px"><input data-rt="'+i+'" data-rk="name" value="'+esc(r.name)+'"><input type="number" step="0.01" style="max-width:100px" data-rt="'+i+'" data-rk="price" value="'+esc(r.price)+'"><button class="d" data-a="delRate" data-r="'+i+'">✕</button></div>'}).join('')+'<div class="row" style="margin-top:8px"><button data-a="addRate">+ Add rate</button></div></div><div class="card"><h2>Backup</h2><p class="mu">Copy this text somewhere safe. To restore, paste it into the box and tap Restore.</p><textarea id="bk" style="min-height:120px">'+esc(JSON.stringify(dump()))+'</textarea><div class="row" style="margin-top:8px"><button data-a="restore">Restore from box</button></div></div><button class="p" data-a="back">Done</button>'}
+else if(S.view==='diary'){h=diary()}else if(S.view==='invoices'){h=invList()}else if(S.view==='invoice'){h=invView()}else if(S.view==='edit'){var r=cur();
+h='<div class="row noprint"><button data-a="back">← Back</button><button class="p" data-a="preview" data-id="'+r.id+'">View report</button></div><h1>'+(r.co?'Check Out':r.ins?'Inspection':'Inventory')+'</h1>'+(r.co?'<div class="row" style="margin-bottom:10px"><button data-a="sameAll">Fill “As Inventory” on every item with no check-out entry</button></div>':'')+'<div class="card"><label>Property address</label><textarea data-f="address">'+esc(r.address)+'</textarea><div class="row"><div><label>Type</label><select data-f="type">'+['Inventory','Check-in','Check-out','Inspection','Mid-term inspection'].map(function(t){return'<option'+(t===r.type?' selected':'')+'>'+t+'</option>'}).join('')+'</select></div><div><label>Date</label><input type="date" data-f="date" value="'+esc(r.date)+'"></div></div><div class="row"><div><label>Prepared on behalf of (agency)</label><input data-f="agent" value="'+esc(r.agent)+'"></div><div><label>Property inspected by</label><input data-f="inspector" value="'+esc(r.inspector)+'"></div></div><label>Tenant(s)</label><input data-f="tenant" value="'+esc(r.tenant)+'"><label>Cover photo (front of property)</label>'+(r.cover?'<img src="'+r.cover+'" style="width:100px;display:block;margin-bottom:6px" alt="">':'')+'<input type="file" accept="image/*" data-up="cover"><label>Additional notes (optional, shown on the Notes page)</label><textarea data-f="general">'+esc(r.general)+'</textarea></div>';
+r.rooms.forEach(function(rm,ri){h+='<div class="card"><div class="row"><input data-rn="'+ri+'" value="'+esc(rm.name)+'" style="font-weight:600"><button class="d" data-a="delRoom" data-r="'+ri+'">Remove room</button></div>';
+rm.items.forEach(function(it,ii){h+='<div class="item">'+fl(rm,ri,ii,it)+'<div class="th">'+it.photos.map(function(p,pi){return'<div><img src="'+(p.u||p)+'" alt=""><b data-a="delPhoto" data-r="'+ri+'" data-i="'+ii+'" data-p="'+pi+'">×</b></div>'}).join('')+'</div><div class="row" style="margin-top:6px"><div><label>Add photo</label><input type="file" accept="image/*" data-up="ph" data-r="'+ri+'" data-i="'+ii+'"></div><button class="d" data-a="delItem" data-r="'+ri+'" data-i="'+ii+'">Remove item</button></div></div>'});
+h+='<div class="row" style="margin-top:10px"><button data-a="addItem" data-r="'+ri+'">+ Add item</button></div></div>'});
+h+='<div class="row noprint"><button data-a="addRoom">+ Add room</button><button class="p" data-a="preview" data-id="'+r.id+'">View report</button></div>'}
+else if(S.view==='preview'){h=rep()}else{var r=cur(),B=S.biz;
+h='<div class="row noprint" style="margin-bottom:10px"><button data-a="open" data-id="'+r.id+'">← Edit</button><button class="p" data-a="print">Print / Save as PDF</button></div><p class="mu noprint">Tap Print, then choose “Save as PDF” to email the report to the agent.</p><div class="paper"><h1>'+esc(r.type)+' Report</h1><div style="margin:4px 0 12px;color:#555">'+esc(B.name)+'<br><span style="white-space:pre-line">'+esc(B.contact)+'</span></div><table><tr><th>Property</th><td style="white-space:pre-line">'+esc(r.address)+'</td></tr><tr><th>Date</th><td>'+fmt(r.date)+'</td></tr><tr><th>Agent / landlord</th><td>'+esc(r.agent)+'</td></tr><tr><th>Tenant(s)</th><td>'+esc(r.tenant)+'</td></tr><tr><th>General notes</th><td style="white-space:pre-line">'+esc(r.general)+'</td></tr></table>';
+r.rooms.forEach(function(rm){h+='<h2>'+esc(rm.name)+'</h2><table><tr><th style="width:26%">Item</th><th style="width:15%">Condition</th><th>Notes</th></tr>';
+rm.items.forEach(function(it){h+='<tr><td>'+esc(it.name)+'</td><td>'+esc(it.cond)+'</td><td>'+esc(it.notes)+(it.photos.length?'<div class="ph">'+it.photos.map(function(p){return'<img src="'+p+'" alt="">'}).join('')+'</div>':'')+'</td></tr>'});h+='</table>'});
+h+='<p style="font-size:13px;margin-top:18px">This report records the condition of the property at the date of inspection. Please notify us of any discrepancies within 7 days of receipt.</p><div class="sig"><div>Tenant signature / date</div><div>Inspector signature / date</div></div></div>'}
+document.getElementById('app').innerHTML=h}
+function td(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)}
+function cal(){var t=td();if(!S.mo)S.mo=t.slice(0,7);if(!S.day)S.day=t;
+var p=S.mo.split('-'),y=+p[0],mo=+p[1]-1,first=new Date(y,mo,1),off=(first.getDay()+6)%7,dim=new Date(y,mo+1,0).getDate(),by={};
+S.jobs.forEach(function(j){(by[j.date]=by[j.date]||[]).push(j)});
+var h='<div class="card"><div class="row" style="flex-wrap:nowrap"><button data-a="mo" data-v="-1">‹</button><b style="text-align:center">'+first.toLocaleDateString('en-GB',{month:'long',year:'numeric'})+'</b><button data-a="mo" data-v="1">›</button><button data-a="today">Today</button></div><div class="cal">'+['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(x){return'<div class="dh">'+x+'</div>'}).join('');
+for(var i=0;i<off;i++)h+='<div></div>';
+for(var d=1;d<=dim;d++){var ds=S.mo+'-'+('0'+d).slice(-2),js=by[ds]||[];h+='<div class="dc'+(ds===S.day?' sel':'')+(ds===t?' td':'')+'" data-a="day" data-id="'+ds+'"><span>'+d+'</span>'+js.slice(0,2).map(function(j){return'<i class="'+(j.inv?'iv':'')+'">'+esc(j.name)+'</i>'}).join('')+(js.length>2?'<em>+'+(js.length-2)+' more</em>':'')+'</div>'}
+return h+'</div><p class="mu" style="margin:6px 0 0">Tap a day to see or add jobs. Grey = already invoiced.</p></div>'}
+function rep(){var r=cur(),B=S.biz;
+var h='<div class="row noprint" style="margin-bottom:10px"><button data-a="open" data-id="'+r.id+'">← Edit</button><button class="p" data-a="print">Print / Save as PDF</button></div><p class="mu noprint">Tap Print, then choose “Save as PDF” to email the report.</p><div class="paper"><div class="pf"><span>'+esc(r.address)+'</span><span>Tenant Initials: __________</span></div>';
+h+='<div class="cover"><h1 style="text-align:center">'+(r.co?'Check Out':r.ins?'Inspection':esc(r.type)+' &amp; Schedule of Condition')+'</h1><div style="text-align:center;margin:16px 0">'+(B.logo?'<img src="'+B.logo+'" style="max-width:240px;max-height:200px" alt="">':'<b style="font-size:22px">'+esc(B.name)+'</b>')+'<div style="white-space:pre-line">'+esc(B.contact)+'</div></div><p style="text-align:center">'+(r.agent?'Prepared on behalf of '+esc(r.agent)+'<br>':'')+(r.inspector?'Property inspected by '+esc(r.inspector)+'<br>':'')+(r.tenant?'Tenant(s): '+esc(r.tenant):'')+'</p><div style="display:flex;gap:12px;justify-content:space-between;align-items:flex-start;margin-top:18px"><div style="flex:1"><b>Address</b><div style="white-space:pre-line;margin-top:6px">'+esc(r.address)+'</div></div>'+(r.cover?'<img src="'+r.cover+'" style="width:42%;max-height:360px;object-fit:cover" alt="">':'')+'<div style="flex:1;text-align:right"><b>Carried Out</b><div style="margin-top:6px;font-size:18px"><b>'+fmt(r.date)+'</b></div></div></div></div>';
+h+='<div class="pb"><h2>Notes</h2><p style="white-space:pre-line">'+esc(B.notes||DN)+'</p>'+(B.disc?'<h2>Disclaimers</h2><p style="white-space:pre-line;font-size:12px">'+esc(B.disc)+'</p>':'')+(r.general?'<h2>Additional notes</h2><p style="white-space:pre-line">'+esc(r.general)+'</p>':'')+'</div>';
+r.rooms.forEach(function(rm,ri){var f=(rm.f||STD.f).slice(),hd=(rm.h||STD.h).slice(),n=ri+1,ni=f.indexOf('notes');if(r.co&&ni>=0){var bh=hd[ni];hd[ni]=bh+' at Inventory';f.push('co');hd.push(bh+' at Check Out')}
+h+='<h2>'+n+'. '+esc(rm.name)+'</h2><table><tr><th style="width:44px">Ref</th>'+hd.map(function(x){return'<th>'+esc(x)+'</th>'}).join('')+'</tr>';
+rm.items.forEach(function(it,ii){h+='<tr><td>'+n+'.'+(ii+1)+'</td>'+f.map(function(k){return'<td style="white-space:pre-line'+(k==='co'&&it.co&&it.co.indexOf('As Inventory')!==0?';background:#fff3dc;-webkit-print-color-adjust:exact;print-color-adjust:exact':'')+'">'+esc(it[k])+'</td>'}).join('')+'</tr>'});
+h+='</table>';var ph='';
+rm.items.forEach(function(it,ii){it.photos.forEach(function(p){ph+='<figure><img src="'+(p.u||p)+'" alt=""><figcaption>Ref #'+n+'.'+(ii+1)+(p.t?' · '+p.t:'')+'</figcaption></figure>'})});
+if(ph)h+='<div class="ph">'+ph+'</div>'});
+h+='<h2>Declaration</h2><p>'+esc(B.decl||DD)+'</p>'+[1,2].map(function(){return'<div class="sigb"><div>Signed by the</div><div>Signatures</div><div>Print Name</div><div>Date &nbsp; / &nbsp; /</div></div>'}).join('')+'</div>';
+return h}
+function nav(){var v=S.view==='invoice'?'invoices':S.view,t=[['list','Reports'],['diary','Diary'],['invoices','Invoices'],['settings','Settings']];return'<div class="row noprint" style="margin-bottom:12px">'+t.map(function(x){return'<button data-a="go" data-v="'+x[0]+'"'+(v===x[0]?' class="p"':'')+'>'+x[1]+'</button>'}).join('')+'</div>'}
+function diary(){var n=S.nj,cl=[],h=nav()+'<h1>Diary</h1>'+cal();
+S.jobs.forEach(function(j){if(j.client&&cl.indexOf(j.client)<0)cl.push(j.client)});
+h+='<div class="card"><h2>Add job · '+fmt(S.day)+'</h2><div class="row"><div><label>Date</label><input type="date" data-nj="date" value="'+esc(n.date)+'"></div><div><label>Client / agent</label><input list="cl" data-nj="client" value="'+esc(n.client)+'"><datalist id="cl">'+cl.map(function(c){return'<option value="'+esc(c)+'">'}).join('')+'</datalist></div></div><div class="row"><div><label>Job type</label><select data-nj="rate"><option value="">Choose…</option>'+S.rates.map(function(r){return'<option value="'+r.id+'"'+(r.id===n.rate?' selected':'')+'>'+esc(r.name)+' (£'+N(r.price).toFixed(2)+')</option>'}).join('')+'</select></div><div><label>Qty</label><input type="number" data-nj="qty" value="'+esc(n.qty)+'"></div><div><label>Price each (£)</label><input type="number" step="0.01" data-nj="price" value="'+esc(n.price)+'"></div></div><label>Property / notes</label><input data-nj="desc" value="'+esc(n.desc)+'"><div class="row" style="margin-top:8px"><button class="p" data-a="addJob">Add to diary</button></div></div>';
+var dj=S.jobs.filter(function(j){return j.date===S.day});h+='<div class="card"><h2>'+fmt(S.day)+'</h2>'+(dj.length?'':'<p class="mu">Nothing booked.</p>')+dj.map(function(j){return'<div class="item"><b>'+esc(j.name)+'</b> · '+esc(j.client)+(j.desc?' · '+esc(j.desc):'')+'<div class="mu">'+N(j.qty)+' × '+m(N(j.price))+' = '+m(N(j.qty)*N(j.price))+(j.inv?' · Invoiced '+esc(invNo(j.inv)):'')+'</div><button class="d" data-a="delJob" data-id="'+j.id+'" style="margin-top:6px">Delete</button></div>'}).join('')+'</div><h2>Ready to invoice</h2>';
+var js=S.jobs.filter(function(j){return!j.inv}).sort(function(a,b){return a.date>b.date?1:-1}),c=Object.keys(S.sel).filter(function(k){return S.sel[k]}).length;
+h+='<div class="row noprint"><button class="p" data-a="mkInv">Create invoice from ticked jobs ('+c+')</button></div><p class="mu">'+(js.length?'Tick the jobs to invoice, then create the invoice.':'Nothing waiting to be invoiced.')+'</p>';
+js.forEach(function(j){var t=N(j.qty)*N(j.price);h+='<div class="card"><div class="row" style="flex-wrap:nowrap">'+(j.inv?'':'<input type="checkbox" style="width:auto;flex:0 0 auto" data-a="sel" data-id="'+j.id+'"'+(S.sel[j.id]?' checked':'')+'>')+'<div><b>'+esc(j.name)+'</b> · '+fmt(j.date)+'<div class="mu">'+esc(j.client)+(j.desc?' · '+esc(j.desc):'')+'</div><div class="mu">'+N(j.qty)+' × £'+N(j.price).toFixed(2)+' = '+m(t)+(j.inv?' · Invoiced '+esc(invNo(j.inv)):'')+'</div></div><button class="d" data-a="delJob" data-id="'+j.id+'">✕</button></div></div>'});
+return h}
+function invList(){var h=nav()+'<h1>Invoices</h1>',o=0;
+S.invs.slice().reverse().forEach(function(i){var t=tot(i).t;if(!i.paid)o+=t;h+='<div class="card"><h2>'+esc(i.no)+' · '+esc(i.client)+'</h2><div class="mu">'+fmt(i.date)+' · '+m(t)+' · '+(i.paid?'Paid':'Unpaid')+'</div><div class="row" style="margin-top:8px"><button data-a="openInv" data-id="'+i.id+'">Open</button></div></div>'});
+return h.replace('</h1>','</h1><p class="mu">Outstanding: '+m(o)+'</p>')+(S.invs.length?'':'<p class="mu">No invoices yet. Tick jobs in the Diary to create one.</p>')}
+function invView(){var i=S.invs.filter(function(x){return x.id===S.ci})[0],B=S.biz;if(!i){S.view='invoices';return invList()}var q=tot(i);
+return'<div class="row noprint" style="margin-bottom:10px"><button data-a="go" data-v="invoices">← Invoices</button><button class="p" data-a="print">Print / Save as PDF</button><button data-a="paid">'+(i.paid?'Mark unpaid':'Mark paid')+'</button><button class="d" data-a="delInv">Delete</button></div><div class="paper"><h1>Invoice</h1><div style="margin:4px 0 12px;color:#555"><b>'+esc(B.name)+'</b><br><span style="white-space:pre-line">'+esc(B.contact)+'</span></div><table><tr><th>Invoice no.</th><td>'+esc(i.no)+'</td><th>Date</th><td>'+fmt(i.date)+'</td></tr><tr><th>Bill to</th><td colspan="3">'+esc(i.client)+'</td></tr></table><h2>Services</h2><table><tr><th>Description</th><th style="width:50px">Qty</th><th style="width:80px">Unit</th><th style="width:90px">Total</th></tr>'+i.lines.map(function(l){return'<tr><td>'+esc(l.desc)+'</td><td>'+N(l.qty)+'</td><td>'+m(N(l.price))+'</td><td>'+m(N(l.qty)*N(l.price))+'</td></tr>'}).join('')+'<tr><td colspan="3" style="text-align:right">Subtotal</td><td>'+m(q.s)+'</td></tr>'+(N(i.vat)?'<tr><td colspan="3" style="text-align:right">VAT ('+i.vat+'%)</td><td>'+m(q.v)+'</td></tr>':'')+'<tr><th colspan="3" style="text-align:right">Total due</th><th>'+m(q.t)+'</th></tr></table>'+(i.paid?'<p><b>PAID</b></p>':'')+'<h2>Payment details</h2><div style="white-space:pre-line">'+esc(B.pay)+'</div></div>'}
+function newR(){return{id:'r'+Date.now(),type:'Inventory',date:new Date().toISOString().slice(0,10),address:'',agent:'',inspector:'',tenant:'',general:'',cover:'',rooms:['soc','meter','keys','alarm'].map(mkS).concat(Object.keys(ROOMS).map(mk))}}
+document.addEventListener('click',function(e){var t=e.target.closest('[data-a]');if(!t)return;var a=t.dataset.a,id=t.dataset.id,r=cur(),ri=+t.dataset.r,ii=+t.dataset.i;
+if(a==='new'){var n=newR();S.reports.push(n);S.cur=n.id;S.view='edit';save()}
+else if(a==='newI'){var n=newR();n.ins=true;n.type='Inspection';n.rooms=['pi','mt','hs','al','wp','dm','uo','pt','sm','soc2'].map(mkS);S.reports.push(n);S.cur=n.id;S.view='edit';save()}
+else if(a==='open'){S.cur=id;S.view='edit'}
+else if(a==='preview'){S.cur=id;S.view='preview';scrollTo(0,0)}
+else if(a==='back'){S.view='list';save()}
+else if(a==='mkCO'){var o=JSON.parse(JSON.stringify(S.reports.filter(function(x){return x.id===id})[0]));o.id='r'+Date.now();o.type='Check-out';o.co=true;o.date=td();o.rooms.forEach(function(rm){rm.items.forEach(function(it){it.co='';it.photos=[]})});S.reports.push(o);S.cur=o.id;S.view='edit';scrollTo(0,0)}
+else if(a==='same'){r.rooms[ri].items[ii].co='As Inventory & Schedule of Condition'}
+else if(a==='sameAll'){r.rooms.forEach(function(rm){rm.items.forEach(function(it){if(it.notes&&!it.co)it.co='As Inventory & Schedule of Condition'})})}
+else if(a==='go'){S.view=t.dataset.v;scrollTo(0,0)}
+else if(a==='mo'){var q=S.mo.split('-'),dt=new Date(+q[0],+q[1]-1+(+t.dataset.v),1);S.mo=dt.getFullYear()+'-'+('0'+(dt.getMonth()+1)).slice(-2)}
+else if(a==='today'){S.day=td();S.mo=S.day.slice(0,7);S.nj.date=S.day}
+else if(a==='day'){S.day=id;S.mo=id.slice(0,7);S.nj.date=id}
+else if(a==='addRate'){S.rates.push({id:'t'+Date.now(),name:'',price:0})}
+else if(a==='delRate'){S.rates.splice(ri,1)}
+else if(a==='sel'){S.sel[id]=!S.sel[id]}
+else if(a==='addJob'){var n=S.nj,rt=S.rates.filter(function(x){return x.id===n.rate})[0];if(!rt&&!n.desc){alert('Choose a job type or add a description.');return}S.jobs.push({id:'j'+Date.now(),date:n.date,client:n.client,name:rt?rt.name:'Job',desc:n.desc,qty:N(n.qty)||1,price:N(n.price),inv:''});S.nj.desc=''}
+else if(a==='delJob'){if(!confirm('Delete this job?'))return;S.jobs=S.jobs.filter(function(x){return x.id!==id})}
+else if(a==='mkInv'){var js=S.jobs.filter(function(j){return S.sel[j.id]&&!j.inv});if(!js.length){alert('Tick the jobs you want to invoice first.');return}var cs=[];js.forEach(function(j){if(cs.indexOf(j.client)<0)cs.push(j.client)});if(cs.length>1){alert('Please tick jobs for one client at a time.');return}var mx=0;S.invs.forEach(function(i){mx=Math.max(mx,parseInt(i.no.replace(/\D/g,''))||0)});var nv={id:'i'+Date.now(),no:'INV-'+('000'+(mx+1)).slice(-4),date:new Date().toISOString().slice(0,10),client:cs[0],vat:N(S.biz.vat),paid:false,lines:js.map(function(j){return{desc:fmt(j.date)+' – '+j.name+(j.desc?': '+j.desc:''),qty:j.qty,price:j.price}})};js.forEach(function(j){j.inv=nv.id});S.invs.push(nv);S.sel={};S.ci=nv.id;S.view='invoice';scrollTo(0,0)}
+else if(a==='openInv'){S.ci=id;S.view='invoice';scrollTo(0,0)}
+else if(a==='paid'){var iv=S.invs.filter(function(x){return x.id===S.ci})[0];iv.paid=!iv.paid}
+else if(a==='delInv'){if(!confirm('Delete this invoice? Its jobs return to the diary.'))return;S.jobs.forEach(function(j){if(j.inv===S.ci)j.inv=''});S.invs=S.invs.filter(function(x){return x.id!==S.ci});S.view='invoices'}
+else if(a==='settings'){S.view='settings'}
+else if(a==='print'){window.print();return}
+else if(a==='del'){if(!confirm('Delete this report?'))return;S.reports=S.reports.filter(function(x){return x.id!==id});save()}
+else if(a==='dup'){var o=JSON.parse(JSON.stringify(S.reports.filter(function(x){return x.id===id})[0]));o.id='r'+Date.now();o.address+=' (copy)';S.reports.push(o);save()}
+else if(a==='addRoom'){r.rooms.push(mk('New room'))}
+else if(a==='delRoom'){if(!confirm('Remove this room?'))return;r.rooms.splice(ri,1)}
+else if(a==='addItem'){r.rooms[ri].items.push({name:'',cond:'Good',notes:'',photos:[]})}
+else if(a==='delItem'){r.rooms[ri].items.splice(ii,1)}
+else if(a==='delPhoto'){r.rooms[ri].items[ii].photos.splice(+t.dataset.p,1)}
+else if(a==='photo'){T=[ri,ii];document.getElementById('pf').click();return}
+else if(a==='logo'||a==='cover'){T=[a];document.getElementById('pf').click();return}
+else if(a==='restore'){try{var d=JSON.parse(document.getElementById('bk').value);if(!d.reports)throw 0;if(!confirm('Replace all current data?'))return;S.biz=d.biz||S.biz;S.reports=d.reports;S.rates=d.rates||S.rates;S.jobs=d.jobs||[];S.invs=d.invs||[];S.view='list'}catch(x){alert('That backup text could not be read.');return}}
+save();render()});
+document.addEventListener('input',function(e){var t=e.target,r=cur();
+if(t.dataset.f&&r)r[t.dataset.f]=t.value;
+else if(t.dataset.k&&r)r.rooms[+t.dataset.r].items[+t.dataset.i][t.dataset.k]=t.value;
+else if(t.dataset.rn!==undefined&&r)r.rooms[+t.dataset.rn].name=t.value;
+else if(t.dataset.b)S.biz[t.dataset.b]=t.value;
+else if(t.dataset.rt!==undefined)S.rates[+t.dataset.rt][t.dataset.rk]=t.value;
+else if(t.dataset.nj){S.nj[t.dataset.nj]=t.value;if(t.dataset.nj==='rate'){var rr=S.rates.filter(function(x){return x.id===t.value})[0];if(rr)S.nj.price=rr.price;render();return}}
+else return;save()});
+document.addEventListener('change',function(e){var t=e.target,f=t.files&&t.files[0];if(!t.dataset.up||!f)return;var up=t.dataset.up,ri=+t.dataset.r,ii=+t.dataset.i,rd=new FileReader();rd.onload=function(){var im=new Image();im.onload=function(){var s=Math.min(1,900/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);var u=c.toDataURL(up==='logo'?'image/png':'image/jpeg',0.6);if(up==='logo')S.biz.logo=u;else if(up==='cover')cur().cover=u;else cur().rooms[ri].items[ii].photos.push({u:u,t:stamp()});save();render()};im.onerror=function(){alert('That image could not be read.')};im.src=rd.result};rd.readAsDataURL(f)});
+document.getElementById('pf').addEventListener('change',function(e){var f=e.target.files[0];e.target.value='';if(!f||!T)return;var tg=T,rd=new FileReader();
+rd.onload=function(){var im=new Image();im.onload=function(){var s=Math.min(1,900/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);var u=c.toDataURL(tg[0]==='logo'?'image/png':'image/jpeg',0.6);if(tg[0]==='logo')S.biz.logo=u;else if(tg[0]==='cover')cur().cover=u;else cur().rooms[tg[0]].items[tg[1]].photos.push({u:u,t:stamp()});save();render()};im.src=rd.result};rd.readAsDataURL(f)});
+render();
+</script></body></html>
